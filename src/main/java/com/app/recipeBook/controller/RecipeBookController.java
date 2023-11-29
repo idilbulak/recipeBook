@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Set;
 
+import com.app.recipeBook.model.Ingredient;
 import com.app.recipeBook.model.Recipe;
 import com.app.recipeBook.service.RecipeBookService;
 
@@ -30,6 +32,11 @@ public class RecipeBookController {
     @GetMapping("/recipes")
     public List<Recipe> getAllRecipes() {
         return this.recipeBookService.getAllRecipes();
+    }
+
+    @GetMapping("/ingredients")
+    public List<Ingredient> getAllIngredients() {
+        return this.recipeBookService.getAllIngredients();
     }
 
     @PostMapping("/recipes")

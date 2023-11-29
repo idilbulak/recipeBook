@@ -1,10 +1,19 @@
 package com.app.recipeBook.model;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Table;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 
 @Entity
@@ -27,6 +36,14 @@ public class Recipe {
     @Column(name = "instructions")
     private String instructions;
 
+    @ManyToMany(cascade = CascadeType.MERGE, fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "recipe_ingredient",
+        joinColumns = @JoinColumn(name = "recipe_id"),
+        inverseJoinColumns = @JoinColumn(name = "ingredient_id")
+    )
+    private Set<Ingredient> ingredients = new HashSet<>();
+    
     // Default constructor
     public Recipe() {
     }
@@ -37,6 +54,7 @@ public class Recipe {
         this.isVegetarian = isVegetarian;
         this.numberOfservings = numberOfservings;
         this.instructions = instructions;
+        this.ingredients = new HashSet<>();
     }
 
     // Getter and Setter for id
@@ -82,6 +100,14 @@ public class Recipe {
 
     public void setInstructions(String instructions) {
         this.instructions = instructions;
+    }
+
+    public Set<Ingredient> getIngredients() {
+        return ingredients;
+    }
+    
+    public void setIngredients(Set<Ingredient> ingredients) {
+        this.ingredients = ingredients;
     }
 
 }
