@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,9 +18,12 @@ import java.util.Map;
 
 import com.app.recipeBook.model.Ingredient;
 import com.app.recipeBook.model.Recipe;
+import com.app.recipeBook.model.ApiResponse;
 import com.app.recipeBook.service.RecipeBookService;
 
 import com.fasterxml.jackson.databind.JsonNode;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 public class RecipeBookController {
@@ -31,16 +35,6 @@ public class RecipeBookController {
     }
 
     /**
-     * Responds with a simple message indicating the service is a recipe book.
-     * 
-     * @return A String message indicating the nature of the service.
-     */
-    @GetMapping("/")
-    public String recipeBook() {
-        return "this is a recipeBook";
-    }
-
-    /**
      * Retrieves a list of all recipes available in the recipe book.
      * 
      * @return A ResponseEntity with the list of Recipe objects formatted as JSON.
@@ -49,7 +43,8 @@ public class RecipeBookController {
     public ResponseEntity<?> getAllRecipes() {
         List<Recipe> recipes = this.recipeBookService.getAllRecipes();
         if (recipes.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("404 NOT_FOUND");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse("404 NOT_FOUND"));
+
         }
         return ResponseEntity.status(HttpStatus.OK).body(recipes);
     }
@@ -63,8 +58,7 @@ public class RecipeBookController {
     public ResponseEntity<?> getAllIngredients() {
         List<Ingredient> ingredients = this.recipeBookService.getAllIngredients();
         if (ingredients.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("404 NOT_FOUND");
-
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse("404 NOT_FOUND"));
         }
         return ResponseEntity.status(HttpStatus.OK).body(ingredients);
     }
@@ -112,5 +106,16 @@ public class RecipeBookController {
     @DeleteMapping("/recipes/{id}")
     public ResponseEntity<?> deleteRecipe(@PathVariable Long id) {
         return this.recipeBookService.removeRecipe(id);
+    }
+
+    /**
+     * Catch-all mapping for any unspecified routes.
+     * 
+     * @param request The HTTP request.
+     * @return A ResponseEntity with a 404 Not Found status and a message.
+     */
+    @RequestMapping(value = "/**")
+    public ResponseEntity<?> handleUnmappedRequest(HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse("404 NOT_FOUND"));
     }
 }

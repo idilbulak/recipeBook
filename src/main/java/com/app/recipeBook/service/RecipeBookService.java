@@ -5,6 +5,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.lang.reflect.Field;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -18,6 +19,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.app.recipeBook.model.Ingredient;
 import com.app.recipeBook.model.Recipe;
+import com.app.recipeBook.model.ApiResponse;
 import com.app.recipeBook.repository.RecipeRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -105,13 +107,15 @@ public class RecipeBookService {
                 }
             }
             recipeRepository.save(recipe);
-            return ResponseEntity.status(HttpStatus.CREATED).body("201 CREATED");
+            return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse("201 CREATED"));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid recipe parameters");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiResponse("Invalid recipe parameters"));
+
         } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("Recipe with the same name already exists");
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiResponse("Recipe with the same name already exists"));
+
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse("An error occurred"));
         }
     }
 
@@ -174,11 +178,11 @@ public class RecipeBookService {
                     ingredientRepository.delete(removedIngredient);
                 }
             }
-            return ResponseEntity.status(HttpStatus.OK).body("200 OK");
+            return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse("200 OK"));
         } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Recipe doesn't exist");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse("404 NOT_FOUND"));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse("An error occurred"));
         }
     }
 
@@ -207,29 +211,23 @@ public class RecipeBookService {
                 throw new IllegalStateException("Recipe doesn't exist");
             }
             Recipe existingRecipe = optionalRecipe.get();
-            // Get a copy of the ingredients to check later
             Set<Ingredient> ingredientsToCheck = new HashSet<>(existingRecipe.getIngredients());
     
-            // Disassociate ingredients from the recipe
             existingRecipe.getIngredients().clear();
             recipeRepository.save(existingRecipe);
-    
-            // Delete the recipe
             recipeRepository.delete(existingRecipe);
     
-            // Check each ingredient if it's no longer associated with any recipe
             for (Ingredient ingredient : ingredientsToCheck) {
                 boolean isIngredientUsed = recipeRepository.existsByIngredients_Id(ingredient.getId());
                 if (!isIngredientUsed) {
-                    // Ingredient is not used in any other recipe, so it can be safely deleted
                     ingredientRepository.delete(ingredient);
                 }
             }
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body("204 NO CONTENT");
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(new ApiResponse("204 NO CONTENT"));
         } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Recipe doesn't exist");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse("404 NOT_FOUND"));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse("An error occurred"));
         }
     }
 
@@ -263,7 +261,7 @@ public class RecipeBookService {
         try {
             Map<String, Object> criteria = convertJsonNodeToMap(criteriaJsonNode);
 
-            StringBuilder queryString = new StringBuilder("SELECT r FROM Recipe r ");
+            StringBuilder queryString = new StringBuilder("SELECT DISTINCT r FROM Recipe r ");
         
             if (criteria.containsKey("ingredientsContain") || criteria.containsKey("ingredientsNotContain")) {
                 queryString.append("JOIN r.ingredients i ");
@@ -284,10 +282,14 @@ public class RecipeBookService {
                 queryString.append("LOWER(r.instructions) NOT LIKE LOWER(CONCAT('%', :instructionsNotContaining, '%')) AND ");
             }
             if (criteria.containsKey("ingredientsContain")) {
-                queryString.append("LOWER(i.name) LIKE LOWER(CONCAT('%', :ingredientsContain, '%')) AND ");
+                List<String> ingredientsContain = convertJsonArrayToList(criteriaJsonNode.get("ingredientsContain"));
+                queryString.append("r.id IN (SELECT r2.id FROM Recipe r2 JOIN r2.ingredients i2 WHERE i2.name IN :ingredientsContain) AND ");
+                criteria.put("ingredientsContain", ingredientsContain);
             }
             if (criteria.containsKey("ingredientsNotContain")) {
-                queryString.append("r.id NOT IN (SELECT r2.id FROM Recipe r2 JOIN r2.ingredients i2 WHERE LOWER(i2.name) LIKE LOWER(CONCAT('%', :ingredientsNotContain, '%'))) AND ");
+                List<String> ingredientsNotContain = convertJsonArrayToList(criteriaJsonNode.get("ingredientsNotContain"));
+                queryString.append("r.id NOT IN (SELECT r2.id FROM Recipe r2 JOIN r2.ingredients i2 WHERE i2.name IN :ingredientsNotContain) AND ");
+                criteria.put("ingredientsNotContain", ingredientsNotContain);
             }
         
             if (queryString.toString().endsWith(" AND ")) {
@@ -299,6 +301,8 @@ public class RecipeBookService {
             criteria.forEach((key, value) -> {
                 if ("isVegetarian".equals(key)) {
                     query.setParameter("isVegetarian", criteria.get("isVegetarian") == "true" ? true : false);
+                } else if ("ingredientsContain".equals(key) || "ingredientsNotContain".equals(key)) {
+                    query.setParameter(key, criteria.get(key));
                 } else {
                     query.setParameter(key, value);
                 }
@@ -306,12 +310,12 @@ public class RecipeBookService {
         
             List<Recipe> recipes = query.getResultList();
             if (recipes.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No recipes found matching the criteria");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse("404 NOT_FOUND"));
             }
             return ResponseEntity.status(HttpStatus.OK).body(recipes);
         } catch (Exception e) {
             e.printStackTrace(); 
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse("An error occurred"));
         }
     }
 
@@ -321,5 +325,15 @@ public class RecipeBookService {
             map.put(entry.getKey(), entry.getValue().asText());
         });
         return map;
+    }
+
+    private List<String> convertJsonArrayToList(JsonNode jsonArrayNode) {
+        List<String> list = new ArrayList<>();
+        if (jsonArrayNode.isArray()) {
+            for (JsonNode jsonNode : jsonArrayNode) {
+                list.add(jsonNode.asText());
+            }
+        }
+        return list;
     }
 }

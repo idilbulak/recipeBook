@@ -7,4 +7,8 @@ services:
     ports:
       - "8080:8080"
       - "9092:9092"
-
+  # tests:
+  #   build: ./test
+  #   container_name: test
+  #   depends_on:
+  #     - app
