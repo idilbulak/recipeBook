@@ -11,6 +11,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 import jakarta.persistence.CascadeType;
@@ -27,11 +28,11 @@ public class Recipe {
     @Column(name = "name")
     private String name;
 
-    @Column(name = "isVegatarian")
+    @Column(name = "isVegetarian")
     private Boolean isVegetarian;
 
-    @Column(name = "numberOfservings")
-    private Integer numberOfservings;
+    @Column(name = "numberOfServings")
+    private Integer numberOfServings;
 
     @Column(name = "instructions")
     private String instructions;
@@ -49,10 +50,10 @@ public class Recipe {
     }
 
     // Constructor with parameters
-    public Recipe(String name, Boolean isVegetarian, Integer numberOfservings, String instructions) {
+    public Recipe(String name, Boolean isVegetarian, Integer numberOfServings, String instructions) {
         this.name = name;
         this.isVegetarian = isVegetarian;
-        this.numberOfservings = numberOfservings;
+        this.numberOfServings = numberOfServings;
         this.instructions = instructions;
         this.ingredients = new HashSet<>();
     }
@@ -84,13 +85,13 @@ public class Recipe {
         this.isVegetarian = isVegetarian;
     }
 
-    // Getter and Setter for numberOfservings
+    // Getter and Setter for numberOfServings
     public Integer getNumberOfServings() {
-        return numberOfservings;
+        return numberOfServings;
     }
 
-    public void setNumberOfServings(Integer numberOfservings) {
-        this.numberOfservings = numberOfservings;
+    public void setNumberOfServings(Integer numberOfServings) {
+        this.numberOfServings = numberOfServings;
     }
 
     // Getter and Setter for instructions
@@ -102,6 +103,7 @@ public class Recipe {
         this.instructions = instructions;
     }
 
+    // Getter and Setter for ingredients
     public Set<Ingredient> getIngredients() {
         return ingredients;
     }
