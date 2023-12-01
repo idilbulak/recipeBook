@@ -27,7 +27,6 @@ In this application, users can add, update, and delete recipes. Each recipe incl
 - **Ports**: The service exposes port 8080 and maps it to port 8080 on the host machine, allowing access via localhost:8080.
 
 ### Tests Container
-(This is not working right now, I added exported postman collection for now. -recipeBook.postman_collection.json)
 I also have a separate container for running tests, named `tests` by pulling postman/newman. This container depends on the `app` service, ensuring that tests can interact with the main recipeBook application.
 
 ## API Endpoints
